@@ -6,26 +6,23 @@
 
 (def center [(/ size 2) (/ size 2)])
 
-(def radius 245)
-
 (def d 0.015708)
 
 (def offset (/ size 2))
 
-(defn next-point [step]
+(defn sum [& vecs]
+  (apply mapv + vecs))
+
+(defn next-point [{:keys [radius step]}]
   (let [angle (* step d)]
     [(* radius (Math/cos angle))
      (* radius (Math/sin angle))]))
 
-(defn draw-body [{:keys [ref step]}]
-  (let [tx (first ref)
-        ty (last ref)
-        position (next-point step)
-        x (first position)
-        y (last position)]
-    (q/translate (+ x (first ref)) (+ y (last ref)))
-    (q/ellipse 0 0 15 15)))
-
+(defn draw-body [{:keys [ref size]}]
+  (let [x (first ref)
+        y (last ref)]
+    (q/translate x y)
+    (q/ellipse 0 0 size size)))
 
 (defn draw-satellite [[x y] step]
   (q/stroke 255)
@@ -42,7 +39,16 @@
 
 (defn draw-planet1
   [planet]
-  (draw-body {:ref center :step (:step planet)}))
+  (let [step (:step planet)
+        position (next-point planet)
+        abs-position (sum position center)]
+    (draw-body {:ref abs-position :size (:size planet)})
+    (println {:ref abs-position :radius (:size planet)})
+    (doseq [satellite (:satellites planet)]
+      (let [sat-position (next-point {:step step :radius (:radius satellite)})
+            sat-radius (:size satellite)]
+        (println {:ref sat-position :radius sat-radius})
+        (draw-body {:ref sat-position :size sat-radius})))))
 
 
 (defn draw [state]
@@ -50,17 +56,22 @@
   (doseq [planet (:planets state)] (draw-planet1 planet)))
 
 (defn move-planet [planet]
-  (update-in planet :step inc))
+  (update-in planet [:step] inc))
 
 (defn update-fn [state]
-  (for [planet (:planets state)]
-    (move-planet planet)))
+  {:planets
+   (vec (for [planet (:planets state)]
+          (move-planet planet)))})
 
 (defn setup []
-  (q/frame-rate 100)
-  {:planets [{:step   1
-              :radius 30
-              :size   10
+  ;(q/frame-rate 100)
+  {:planets [{:step         1
+              :radius       50
+              :size         10
+              :satellites   [{:radius       20
+                              :orbit-radius 3
+                              :size         20
+                              }]
               }]})
 
 (q/defsketch my
