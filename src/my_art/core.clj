@@ -8,52 +8,45 @@
 
 (def d 0.015708)
 
-(def offset (/ size 2))
-
-(defn sum [& vecs]
+(defn sumv [& vecs]
   (apply mapv + vecs))
 
-(defn next-point [{:keys [radius step]}]
-  (let [angle (* step d)]
+(defn next-point [{:keys [radius step velocity]}]
+  (let [angle (* step d velocity)]
     [(* radius (Math/cos angle))
      (* radius (Math/sin angle))]))
 
-(defn draw-body [{:keys [ref size]}]
+(defn draw-body [{:keys [ref size color]}]
   (let [x (first ref)
         y (last ref)]
     (q/translate x y)
+    (if (nil? color)
+      (q/fill 255)
+      (apply q/fill color))
     (q/ellipse 0 0 size size)))
 
-(defn draw-satellite [[x y] step]
-  (q/stroke 255)
-  (q/fill 220 200 255)
-  (q/ellipse (+ offset x) (+ offset y) 15 15))
 
-(defn draw-planet [[x y]]
-  (let [c (- 255 (* x y))]
-    (q/stroke 255)
-    (q/shininess 2)
-    (q/fill 220 200 255)
-    (q/ellipse (+ offset x) (+ offset y) 15 15)))
-
-
-(defn draw-planet1
+(defn draw-planet
   [planet]
+  (q/push-matrix)
   (let [step (:step planet)
         position (next-point planet)
-        abs-position (sum position center)]
-    (draw-body {:ref abs-position :size (:size planet)})
-    (println {:ref abs-position :radius (:size planet)})
+        abs-position (sumv position center)]
+    (draw-body (merge planet {:ref abs-position}))
     (doseq [satellite (:satellites planet)]
-      (let [sat-position (next-point {:step step :radius (:radius satellite)})
+      (let [sat-position (next-point {:step     step
+                                      :radius   (:radius satellite)
+                                      :velocity (:velocity satellite)})
             sat-radius (:size satellite)]
-        (println {:ref sat-position :radius sat-radius})
-        (draw-body {:ref sat-position :size sat-radius})))))
-
+        (draw-body {:ref sat-position :size sat-radius})))
+    ; Reset any transformations that has happened
+    (q/pop-matrix)))
 
 (defn draw [state]
   (q/background 0)
-  (doseq [planet (:planets state)] (draw-planet1 planet)))
+  (doseq
+    [planet (:planets state)]
+    (draw-planet planet)))
 
 (defn move-planet [planet]
   (update-in planet [:step] inc))
@@ -65,13 +58,22 @@
 
 (defn setup []
   ;(q/frame-rate 100)
-  {:planets [{:step         1
-              :radius       50
-              :size         10
-              :satellites   [{:radius       20
-                              :orbit-radius 3
-                              :size         20
-                              }]
+  {:planets [{:step     1
+              :radius   0
+              :size     50
+              :velocity 0
+              :color    [200 200 200]
+              }
+             {:step       1
+              :radius     250
+              :size       20
+              :velocity   0.1
+              :color      [0 10 200]
+              :satellites [{:radius       30
+                            :orbit-radius 3
+                            :size         10
+                            :velocity     3
+                            }]
               }]})
 
 (q/defsketch my
@@ -80,7 +82,6 @@
              :draw draw
              :setup setup
              :update update-fn
-             ;:renderer :p3d
              :middleware [m/fun-mode identity])
 
 (defn -main [& args])
