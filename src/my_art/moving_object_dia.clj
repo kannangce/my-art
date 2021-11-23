@@ -3,7 +3,7 @@
             [quil.middleware :as m]))
 
 (def size 1000)
-(def delta 0.1)
+(def delta 0.5)
 (def radius 100)
 (def center [(/ size 2) (/ size 2)])
 
@@ -22,9 +22,9 @@
   [object]
   (let [{:keys [angle direction position]} object
         possible-next-x (+ position (* direction delta))
-        should-reverse? (>= (Math/abs position) radius)
-        next-x (if should-reverse? (* direction radius) possible-next-x)
-        next-direction (if should-reverse? (- direction) direction)]
+        should-reverse? (>= (Math/abs possible-next-x) radius)
+        next-direction (if should-reverse? (- direction) direction)
+        next-x (* direction (min (Math/abs possible-next-x) radius))]
     {:angle     angle
      :position  next-x
      :direction next-direction}
@@ -37,6 +37,7 @@
         ref-y (last ref)
         x (first position)
         y (last position)]
+    (println [[ref-x ref-y] [x y]])
     (q/translate ref-x ref-y)
     (if (nil? color)
       (q/fill 255)
@@ -47,9 +48,8 @@
 (defn draw-object
   [object]
   (q/push-matrix)
-  (let [{:keys [angle position]} object
-        pos (derive-point object)]
-    (draw-body {:ref center :size 5 :position pos :color [0 10 200]}))
+  (let [pos (derive-point object)]
+    (draw-body {:ref center :size 50 :position pos :color [0 10 200]}))
   (q/pop-matrix))
 
 (defn draw [state]
@@ -60,7 +60,7 @@
 
 
 (defn update-fn [state]
-  {:planets
+  {:objects
    (vec (for [object (:objects state)]
           (move-object object)))})
 
