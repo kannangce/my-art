@@ -1,6 +1,7 @@
 (ns my-art.moving-object-dia
   (:require [quil.core :as q :include-macros true]
-            [quil.middleware :as m]))
+            [quil.middleware :as m]
+            [my-art.utils :as u]))
 
 (def size 1000)
 (def delta 0.5)
@@ -15,16 +16,17 @@
 
 (defn derive-point
   [{:keys [angle position]}]
-  [(* position (Math/cos angle))
-   (* position (Math/sin angle))])
+  [(* position (Math/cos (u/deg->radian angle)))
+   (* position (Math/sin (u/deg->radian angle)))])
 
 (defn move-object
   [object]
+  (println object)
   (let [{:keys [angle direction position]} object
         possible-next-x (+ position (* direction delta))
         should-reverse? (>= (Math/abs possible-next-x) radius)
-        next-direction (if should-reverse? (- direction) direction)
-        next-x (* direction (min (Math/abs possible-next-x) radius))]
+        next-x possible-next-x
+        next-direction (if should-reverse? (- direction) direction)]
     {:angle     angle
      :position  next-x
      :direction next-direction}
@@ -49,8 +51,10 @@
   [object]
   (q/push-matrix)
   (let [pos (derive-point object)]
-    (draw-body {:ref center :size 50 :position pos :color [0 10 200]}))
+    (draw-body {:ref center :size 10 :position pos :color [0 10 200]}))
   (q/pop-matrix))
+
+
 
 (defn draw [state]
   (q/background 0)
@@ -64,9 +68,32 @@
    (vec (for [object (:objects state)]
           (move-object object)))})
 
+(defn generate-points
+  "Returns the given equidistant points on a circle with the given radius.
+  It is assumed that the center of the circle is at origin. If not, the caller is expected to do the
+  translation."
+  [radius number-of-objects]
+  (let [step (/ 360 number-of-objects)
+        angles (take number-of-objects (map * (range) (step)))]
+    (mapv (partial u/polar->cartesian radius) angles)))
+
+(defn to-parent-circle
+  [])
+
+(defn generate-objects-in-circle
+  [[x y] [x1 y1] n]
+  (let [inner-radius (u/distance [x y] [x1 y1])]
+    ))
+
 (defn setup []
   (q/frame-rate 100)
-  {:objects [{:angle     0
+  {:objects [{:angle     45
+              :position  0
+              :direction 1}
+             {:angle     90
+              :position  0
+              :direction 1}
+             {:angle     0
               :position  0
               :direction 1}]})
 
